@@ -2,7 +2,7 @@
 const $ = s => document.querySelector(s);
 const API = 'https://openrouter.ai/api/v1/chat/completions';
 const log = $('#log'), input = $('#input'), sendBtn = $('#send'), statusEl = $('#status');
-let history = [], busy = false, ctrl = null, statusKey = '';
+let messages = [], busy = false, ctrl = null, statusKey = '';
 
 const I18N = {
   fa: {
@@ -112,11 +112,11 @@ async function send(){
   const c = cfg();
   if (!c.key || !c.model) { $('#dlg').showModal(); setStatus('needSetup'); return; }
   input.value = ''; input.style.height = 'auto'; setStatus('');
-  history.push({ role: 'user', content: text }); addMsg('user', text);
+  messages.push({ role: 'user', content: text }); addMsg('user', text);
   const out = addMsg('assistant', ''); let acc = '';
   ctrl = new AbortController(); setBusy(true);
   try {
-    const body = { model: c.model, messages: history, stream: true };
+    const body = { model: c.model, messages: messages, stream: true };
     if (c.deny) body.provider = { data_collection: 'deny' };
     const res = await fetch(API, {
       method: 'POST', signal: ctrl.signal, referrerPolicy: 'no-referrer', credentials: 'omit', cache: 'no-store',
@@ -143,9 +143,9 @@ async function send(){
         } catch (e) { if (e.message && !(e instanceof SyntaxError)) throw e; }
       }
     }
-    if (acc) history.push({ role: 'assistant', content: acc }); else out.remove();
+    if (acc) messages.push({ role: 'assistant', content: acc }); else out.remove();
   } catch (e) {
-    if (acc) history.push({ role: 'assistant', content: acc });
+    if (acc) messages.push({ role: 'assistant', content: acc });
     if (e.name === 'AbortError') { if (!acc) out.remove(); }
     else {
       if (!acc) out.remove();
@@ -159,7 +159,7 @@ sendBtn.addEventListener('click', send);
 input.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); send(); } });
 input.addEventListener('input', () => { input.style.height = 'auto'; input.style.height = input.scrollHeight + 'px'; });
 
-$('#newBtn').addEventListener('click', () => { ctrl?.abort(); history = []; log.replaceChildren(); setStatus(cfg().key ? '' : 'noKey'); });
+$('#newBtn').addEventListener('click', () => { ctrl?.abort(); messages = []; log.replaceChildren(); setStatus(cfg().key ? '' : 'noKey'); });
 $('#setBtn').addEventListener('click', () => {
   const c = cfg();
   $('#key').value = c.key; $('#model').value = c.model; $('#deny').checked = c.deny;
