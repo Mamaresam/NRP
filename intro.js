@@ -52,6 +52,7 @@ function frame(){
   raf = 0; if (launching) return;
   const max = $('intro').offsetHeight - innerHeight;
   const p = max > 0 ? clamp(scrollY / max) : 0;
+  const atEnd = scrollY >= root.scrollHeight - innerHeight - 4;
   $('la').style.transform = `translateY(${-p * 30}vh)`;
   $('lb').style.transform = `translateY(${-p * 70}vh)`;
   $('p1').style.transform = `translate(${-p * 20}vw,${-p * 60}vh) rotate(${p * 90}deg)`;
@@ -74,7 +75,7 @@ function frame(){
   $('flame').classList.toggle('on', p > .8);
   $('pad').style.opacity = ramp(p, .55, .75);
   $('bar').style.transform = `scaleY(${p})`;
-  if (p >= .995) launch();
+  if (p >= .97 || (p > .9 && atEnd)) launch();
 }
 function launch(){
   if (launching) return; launching = true;
