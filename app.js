@@ -2,7 +2,51 @@
 const $ = s => document.querySelector(s);
 const API = 'https://openrouter.ai/api/v1/chat/completions';
 const log = $('#log'), input = $('#input'), sendBtn = $('#send'), statusEl = $('#status');
-let history = [], busy = false, ctrl = null;
+let history = [], busy = false, ctrl = null, statusKey = '';
+
+const I18N = {
+  fa: {
+    title: 'چت خصوصی', new: 'گفتگوی جدید', settings: 'تنظیمات',
+    askAnything: 'هر چیزی بپرس.',
+    intro: 'برای شروع، از «تنظیمات» کلید API و مدل را وارد کن. گفتگوها فقط در همین تب می‌مانند.',
+    placeholder: 'پیام خود را بنویس', send: 'ارسال', stop: 'توقف',
+    apiKey: 'کلید API (OpenRouter)', model: 'مدل', system: 'پیام سیستمی (اختیاری)',
+    deny: 'فقط providerهایی که داده ذخیره نمی‌کنند',
+    remember: 'کلید را در این مرورگر نگه دار',
+    note: 'پیش‌فرض: کلید فقط تا بسته شدن تب می‌ماند. هیچ داده‌ای به جز درخواست مستقیم به openrouter.ai ارسال نمی‌شود.',
+    wipe: 'پاک کردن کلید', save: 'ذخیره',
+    needSetup: 'ابتدا کلید و مدل را وارد کن.', noKey: 'کلید API تنظیم نشده است.',
+    error: 'خطا', checkKey: ' (کلید یا اعتبار را بررسی کن)', langBtn: 'EN'
+  },
+  en: {
+    title: 'Private Chat', new: 'New chat', settings: 'Settings',
+    askAnything: 'Ask anything.',
+    intro: 'To start, open Settings and enter your API key and model. Chats stay in this tab only.',
+    placeholder: 'Type your message', send: 'Send', stop: 'Stop',
+    apiKey: 'API key (OpenRouter)', model: 'Model', system: 'System prompt (optional)',
+    deny: 'Only providers that do not store data',
+    remember: 'Remember the key in this browser',
+    note: 'By default the key lasts only until the tab is closed. Nothing is sent anywhere except directly to openrouter.ai.',
+    wipe: 'Clear key', save: 'Save',
+    needSetup: 'Enter your key and model first.', noKey: 'No API key set.',
+    error: 'Error', checkKey: ' (check your key or credits)', langBtn: 'فا'
+  }
+};
+let lang = 'fa';
+try { if (localStorage.getItem('lang') === 'en') lang = 'en'; } catch {}
+const t = k => I18N[lang][k];
+
+function applyLang(){
+  document.documentElement.lang = lang;
+  document.documentElement.dir = lang === 'fa' ? 'rtl' : 'ltr';
+  document.title = t('title');
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el => { el.placeholder = t(el.dataset.i18nPh); });
+  $('#langBtn').textContent = t('langBtn');
+  sendBtn.textContent = busy ? t('stop') : t('send');
+  statusEl.textContent = statusKey ? t(statusKey) : '';
+}
+function setStatus(k){ statusKey = k; statusEl.textContent = k ? t(k) : ''; }
 
 const store = {
   get(k){ try { return sessionStorage.getItem(k) ?? localStorage.getItem(k) ?? ''; } catch { return ''; } },
@@ -34,14 +78,14 @@ function addMsg(role, text){
   if (role === 'assistant') render(el, text); else { el.dir = 'auto'; el.textContent = text; }
   log.append(el); log.scrollTop = log.scrollHeight; return el;
 }
-function setBusy(b){ busy = b; sendBtn.textContent = b ? 'توقف' : 'ارسال'; }
+function setBusy(b){ busy = b; sendBtn.textContent = b ? t('stop') : t('send'); }
 
 async function send(){
   if (busy) { ctrl?.abort(); return; }
   const text = input.value.trim(); if (!text) return;
   const c = cfg();
-  if (!c.key || !c.model) { $('#dlg').showModal(); statusEl.textContent = 'ابتدا کلید و مدل را وارد کن.'; return; }
-  input.value = ''; input.style.height = 'auto'; statusEl.textContent = '';
+  if (!c.key || !c.model) { $('#dlg').showModal(); setStatus('needSetup'); return; }
+  input.value = ''; input.style.height = 'auto'; setStatus('');
   history.push({ role: 'user', content: text }); addMsg('user', text);
   const out = addMsg('assistant', ''); let acc = '';
   ctrl = new AbortController(); setBusy(true);
@@ -68,9 +112,9 @@ async function send(){
         const d = l.slice(6).trim(); if (d === '[DONE]') continue;
         try {
           const j = JSON.parse(d);
-          if (j.error) throw new Error(j.error.message || 'خطا');
-          const t = j.choices?.[0]?.delta?.content;
-          if (t) { acc += t; render(out, acc); log.scrollTop = log.scrollHeight; }
+          if (j.error) throw new Error(j.error.message || t('error'));
+          const tx = j.choices?.[0]?.delta?.content;
+          if (tx) { acc += tx; render(out, acc); log.scrollTop = log.scrollHeight; }
         } catch (e) { if (e.message && !(e instanceof SyntaxError)) throw e; }
       }
     }
@@ -78,7 +122,11 @@ async function send(){
   } catch (e) {
     if (acc) history.push({ role: 'assistant', content: acc });
     if (e.name === 'AbortError') { if (!acc) out.remove(); }
-    else { if (!acc) out.remove(); const er = addMsg('assistant', ''); er.className = 'msg error'; er.textContent = 'خطا: ' + e.message + (/^40[13]/.test(e.message) ? ' (کلید یا اعتبار را بررسی کن)' : ''); }
+    else {
+      if (!acc) out.remove();
+      const er = addMsg('assistant', ''); er.className = 'msg error'; er.dir = 'auto';
+      er.textContent = t('error') + ': ' + e.message + (/^40[13]/.test(e.message) ? t('checkKey') : '');
+    }
   } finally { setBusy(false); ctrl = null; }
 }
 
@@ -86,7 +134,12 @@ sendBtn.addEventListener('click', send);
 input.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); send(); } });
 input.addEventListener('input', () => { input.style.height = 'auto'; input.style.height = input.scrollHeight + 'px'; });
 
-$('#newBtn').addEventListener('click', () => { ctrl?.abort(); history = []; log.replaceChildren(); statusEl.textContent = ''; });
+$('#langBtn').addEventListener('click', () => {
+  lang = lang === 'fa' ? 'en' : 'fa';
+  try { localStorage.setItem('lang', lang); } catch {}
+  applyLang();
+});
+$('#newBtn').addEventListener('click', () => { ctrl?.abort(); history = []; log.replaceChildren(); setStatus(cfg().key ? '' : 'noKey'); });
 $('#setBtn').addEventListener('click', () => {
   const c = cfg();
   $('#key').value = c.key; $('#model').value = c.model; $('#sys').value = c.sys; $('#deny').checked = c.deny;
@@ -100,9 +153,11 @@ $('#save').addEventListener('click', () => {
   store.set('sys', $('#sys').value, persist);
   store.set('deny', $('#deny').checked ? '1' : '0', persist);
   refreshLabel(); $('#dlg').close();
+  setStatus(cfg().key ? '' : 'noKey');
 });
 $('#wipe').addEventListener('click', () => { store.del('key'); $('#key').value = ''; $('#remember').checked = false; });
 $('#dlg').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.close(); });
 
 refreshLabel();
-if (!cfg().key) statusEl.textContent = 'کلید API تنظیم نشده است.';
+statusKey = cfg().key ? '' : 'noKey';
+applyLang();
