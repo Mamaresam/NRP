@@ -6,52 +6,53 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src https://openrouter.ai; img-src 'none'; font-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="light dark">
-<title>چت خصوصی</title>
+<title>Private Chat</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <header>
-  <h1>چت خصوصی</h1>
+  <h1 data-i18n="title"></h1>
   <div class="bar">
     <span id="modelLabel" class="chip"></span>
-    <button id="newBtn" class="ghost" type="button">گفتگوی جدید</button>
-    <button id="setBtn" class="ghost" type="button">تنظیمات</button>
+    <button id="langBtn" class="ghost" type="button" dir="ltr"></button>
+    <button id="newBtn" class="ghost" type="button" data-i18n="new"></button>
+    <button id="setBtn" class="ghost" type="button" data-i18n="settings"></button>
   </div>
 </header>
 
 <main id="log" aria-live="polite">
   <div id="empty">
-    <p class="big">هر چیزی بپرس.</p>
-    <p class="small">برای شروع، از «تنظیمات» کلید API و مدل را وارد کن. گفتگوها فقط در همین تب می‌مانند.</p>
+    <p class="big" data-i18n="askAnything"></p>
+    <p class="small" data-i18n="intro"></p>
   </div>
 </main>
 
 <footer>
   <div class="composer">
-    <textarea id="input" rows="1" dir="auto" placeholder="پیام خود را بنویس" aria-label="پیام"></textarea>
-    <button id="send" type="button">ارسال</button>
+    <textarea id="input" rows="1" dir="auto" data-i18n-ph="placeholder"></textarea>
+    <button id="send" type="button"></button>
   </div>
   <p id="status" class="small" role="status"></p>
 </footer>
 
 <dialog id="dlg">
   <div class="panel">
-    <h2>تنظیمات</h2>
-    <label>کلید API (OpenRouter)
+    <h2 data-i18n="settings"></h2>
+    <label><span data-i18n="apiKey"></span>
       <input id="key" type="password" autocomplete="off" spellcheck="false" dir="ltr">
     </label>
-    <label>مدل
-      <input id="model" type="text" autocomplete="off" spellcheck="false" dir="ltr" placeholder="مثلاً provider/model-name">
+    <label><span data-i18n="model"></span>
+      <input id="model" type="text" autocomplete="off" spellcheck="false" dir="ltr" placeholder="provider/model-name">
     </label>
-    <label>پیام سیستمی (اختیاری)
+    <label><span data-i18n="system"></span>
       <textarea id="sys" rows="2" dir="auto"></textarea>
     </label>
-    <label class="row"><input id="deny" type="checkbox" checked> فقط providerهایی که داده ذخیره نمی‌کنند</label>
-    <label class="row"><input id="remember" type="checkbox"> کلید را در این مرورگر نگه دار</label>
-    <p class="small">پیش‌فرض: کلید فقط تا بسته شدن تب می‌ماند. هیچ داده‌ای به جز درخواست مستقیم به openrouter.ai ارسال نمی‌شود.</p>
+    <label class="row"><input id="deny" type="checkbox" checked> <span data-i18n="deny"></span></label>
+    <label class="row"><input id="remember" type="checkbox"> <span data-i18n="remember"></span></label>
+    <p class="small" data-i18n="note"></p>
     <div class="actions">
-      <button id="wipe" class="ghost danger" type="button">پاک کردن کلید</button>
-      <button id="save" type="button">ذخیره</button>
+      <button id="wipe" class="ghost danger" type="button" data-i18n="wipe"></button>
+      <button id="save" type="button" data-i18n="save"></button>
     </div>
   </div>
 </dialog>
