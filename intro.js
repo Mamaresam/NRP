@@ -4,17 +4,25 @@ const $ = id => document.getElementById(id), body = document.body, root = docume
 const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
 const ramp = (x, a, b) => clamp((x - a) / (b - a));
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-let launching = false, raf = 0, last = '', pushed = false;
+let launching = false, raf = 0, last = '', pushed = false, t1 = 0, t2 = 0;
 try { history.scrollRestoration = 'manual'; } catch {}
 
 function reveal(push = true){
-  launching = true; body.classList.add('launched');
+  clearTimeout(t1); clearTimeout(t2);
+  launching = true;
+  body.classList.remove('launching');
+  body.classList.add('launched');
+  void body.offsetHeight;
+  setTimeout(() => {
+    if (body.classList.contains('launched')) body.classList.remove('flash');
+  }, 1100);
   try { sessionStorage.setItem('seen', '1'); } catch {}
   root.style.overflow = ''; scrollTo(0, 0);
   if (push && !reduce && !pushed) { try { history.pushState({ chat: 1 }, ''); pushed = true; } catch {} }
 }
 // go back to the launch scene (rocket on the pad, ready to fly again)
 function toIntro(){
+  clearTimeout(t1); clearTimeout(t2);
   launching = false; last = '';
   body.classList.remove('launched', 'launching', 'flash');
   root.style.overflow = '';
@@ -70,12 +78,17 @@ function launch(){
   root.style.overflow = 'hidden';
   $('flame').classList.add('on'); $('rk').style.transform = 'translate(-50%,0)';
   body.classList.add('launching');
-  setTimeout(() => body.classList.add('flash'), 1200);
-  setTimeout(() => reveal(), 1750);
+  t1 = setTimeout(() => body.classList.add('flash'), 1200);
+  t2 = setTimeout(() => reveal(), 1750);
 }
 
 addEventListener('scroll', () => { raf || (raf = requestAnimationFrame(frame)); }, { passive: true });
 addEventListener('resize', frame);
+
+// if the page was hidden in the middle of the launch, finish it when it comes back
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && launching && !body.classList.contains('launched')) reveal();
+});
 
 if (!reduce) {
   // Android back / browser back
