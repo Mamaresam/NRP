@@ -4,27 +4,30 @@ const $ = id => document.getElementById(id), body = document.body, root = docume
 const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
 const ramp = (x, a, b) => clamp((x - a) / (b - a));
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-let launching = false, raf = 0, last = '', pushed = false, t1 = 0, t2 = 0;
+let launching = false, raf = 0, last = '', pushed = false, t1 = 0, t2 = 0, t3 = 0;
 try { history.scrollRestoration = 'manual'; } catch {}
 
 function reveal(push = true){
-  clearTimeout(t1); clearTimeout(t2);
+  clearTimeout(t1); clearTimeout(t2); clearTimeout(t3);
   launching = true;
-  body.classList.remove('launching');
+  body.classList.remove('launching', 'ready');
   body.classList.add('launched');
-  void body.offsetHeight;
-  setTimeout(() => {
-    if (body.classList.contains('launched')) body.classList.remove('flash');
-  }, 1100);
   try { sessionStorage.setItem('seen', '1'); } catch {}
   root.style.overflow = ''; scrollTo(0, 0);
+  void body.offsetHeight;
+  // after the entrance animation, make sure the chat is fully visible and clean up
+  t3 = setTimeout(() => {
+    if (!body.classList.contains('launched')) return;
+    body.classList.remove('flash');
+    body.classList.add('ready');
+  }, 1200);
   if (push && !reduce && !pushed) { try { history.pushState({ chat: 1 }, ''); pushed = true; } catch {} }
 }
 // go back to the launch scene (rocket on the pad, ready to fly again)
 function toIntro(){
-  clearTimeout(t1); clearTimeout(t2);
+  clearTimeout(t1); clearTimeout(t2); clearTimeout(t3);
   launching = false; last = '';
-  body.classList.remove('launched', 'launching', 'flash');
+  body.classList.remove('launched', 'launching', 'flash', 'ready');
   root.style.overflow = '';
   requestAnimationFrame(() => {
     const max = $('intro').offsetHeight - innerHeight;
