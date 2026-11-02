@@ -32,8 +32,8 @@ const I18N = {
     error: 'Error', checkKey: ' (check your key or credits)', langBtn: 'فا'
   }
 };
-let lang = 'fa';
-try { if (localStorage.getItem('lang') === 'en') lang = 'en'; } catch {}
+let lang = 'en';
+try { if (localStorage.getItem('lang') === 'fa') lang = 'fa'; } catch {}
 const t = k => I18N[lang][k];
 
 function updateSend(){
