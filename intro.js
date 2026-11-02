@@ -1,16 +1,29 @@
 'use strict';
 (() => {
-const $ = id => document.getElementById(id), body = document.body;
+const $ = id => document.getElementById(id), body = document.body, root = document.documentElement;
 const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
 const ramp = (x, a, b) => clamp((x - a) / (b - a));
-let launching = false, raf = 0, last = '';
-function reveal(){
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let launching = false, raf = 0, last = '', pushed = false;
+try { history.scrollRestoration = 'manual'; } catch {}
+
+function reveal(push = true){
   launching = true; body.classList.add('launched');
   try { sessionStorage.setItem('seen', '1'); } catch {}
-  document.documentElement.style.overflow = ''; scrollTo(0, 0);
+  root.style.overflow = ''; scrollTo(0, 0);
+  if (push && !reduce && !pushed) { try { history.pushState({ chat: 1 }, ''); pushed = true; } catch {} }
 }
-let seen = false; try { seen = sessionStorage.getItem('seen') === '1'; } catch {}
-if (seen || matchMedia('(prefers-reduced-motion: reduce)').matches) { reveal(); return; }
+// go back to the launch scene (rocket on the pad, ready to fly again)
+function toIntro(){
+  launching = false; last = '';
+  body.classList.remove('launched', 'launching', 'flash');
+  root.style.overflow = '';
+  requestAnimationFrame(() => {
+    const max = $('intro').offsetHeight - innerHeight;
+    scrollTo(0, Math.round(max * .9));
+    frame();
+  });
+}
 
 // neural network
 const NS = 'http://www.w3.org/2000/svg';
@@ -49,22 +62,38 @@ function frame(){
   $('rs').classList.toggle('shake', p > .88);
   $('flame').classList.toggle('on', p > .8);
   $('pad').style.opacity = ramp(p, .55, .75);
-  $('goBtn').classList.toggle('show', p > .74);
   $('bar').style.transform = `scaleY(${p})`;
   if (p >= .995) launch();
 }
 function launch(){
   if (launching) return; launching = true;
-  document.documentElement.style.overflow = 'hidden';
+  root.style.overflow = 'hidden';
   $('flame').classList.add('on'); $('rk').style.transform = 'translate(-50%,0)';
   body.classList.add('launching');
   setTimeout(() => body.classList.add('flash'), 1200);
-  setTimeout(reveal, 1750);
+  setTimeout(() => reveal(), 1750);
 }
+
 addEventListener('scroll', () => { raf || (raf = requestAnimationFrame(frame)); }, { passive: true });
 addEventListener('resize', frame);
-$('goBtn').addEventListener('click', launch);
-$('skipBtn').addEventListener('click', reveal);
-$('langBtn2').addEventListener('click', () => $('langBtn').click());
-frame();
+
+if (!reduce) {
+  // Android back / browser back
+  addEventListener('popstate', e => {
+    const inChat = body.classList.contains('launched');
+    if (e.state && e.state.chat) { if (!inChat) { pushed = true; reveal(false); } }
+    else if (inChat) { pushed = false; toIntro(); }
+  });
+  // Backspace key (when not typing)
+  addEventListener('keydown', e => {
+    if (e.key !== 'Backspace' || !body.classList.contains('launched')) return;
+    const el = e.target, tag = el.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || el.isContentEditable || document.querySelector('dialog[open]')) return;
+    e.preventDefault();
+    if (pushed) history.back(); else toIntro();
+  });
+}
+
+let seen = false; try { seen = sessionStorage.getItem('seen') === '1'; } catch {}
+if (seen || reduce) reveal(); else frame();
 })();
