@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src https://openrouter.ai; img-src 'none'; font-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
-<meta name="color-scheme" content="light dark">
+<meta name="color-scheme" content="dark">
 <title>Private Chat</title>
 <link rel="stylesheet" href="style.css">
 </head>
@@ -15,8 +15,12 @@
   <div class="bar">
     <span id="modelLabel" class="chip"></span>
     <button id="langBtn" class="ghost" type="button" dir="ltr"></button>
-    <button id="newBtn" class="ghost" type="button" data-i18n="new"></button>
-    <button id="setBtn" class="ghost" type="button" data-i18n="settings"></button>
+    <button id="newBtn" class="ghost icon" type="button" data-i18n-label="new">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
+    <button id="setBtn" class="ghost icon" type="button" data-i18n-label="settings">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>
+    </button>
   </div>
 </header>
 
@@ -30,7 +34,10 @@
 <footer>
   <div class="composer">
     <textarea id="input" rows="1" dir="auto" data-i18n-ph="placeholder"></textarea>
-    <button id="send" type="button"></button>
+    <button id="send" class="icon send" type="button">
+      <svg class="i-send" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+      <svg class="i-stop" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2" fill="currentColor" stroke="none"/></svg>
+    </button>
   </div>
   <p id="status" class="small" role="status"></p>
 </footer>
@@ -44,18 +51,15 @@
     <label><span data-i18n="model"></span>
       <input id="model" type="text" autocomplete="off" spellcheck="false" dir="ltr" placeholder="provider/model-name">
     </label>
-    <label><span data-i18n="system"></span>
-      <textarea id="sys" rows="2" dir="auto"></textarea>
-    </label>
     <label class="row"><input id="deny" type="checkbox" checked> <span data-i18n="deny"></span></label>
     <label class="row"><input id="remember" type="checkbox"> <span data-i18n="remember"></span></label>
     <p class="small" data-i18n="note"></p>
     <div class="actions">
       <button id="wipe" class="ghost danger" type="button" data-i18n="wipe"></button>
-      <button id="save" type="button" data-i18n="save"></button>
+      <button id="save" class="tint" type="button" data-i18n="save"></button>
     </div>
   </div>
 </dialog>
 <script src="app.js"></script>
 </body>
-</html>
+                                                                                                 </html>
