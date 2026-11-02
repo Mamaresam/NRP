@@ -1,7 +1,8 @@
 html[lang="fa"] .en,html[lang="en"] .fa{display:none}
 body:not(.launched)>header,body:not(.launched)>main,body:not(.launched)>footer{visibility:hidden}
 body.launched #intro{display:none}
-body.launched>header,body.launched>main,body.launched>footer{animation:appin .9s cubic-bezier(.2,.8,.2,1) both}
+body.launched>header,body.launched>main,body.launched>footer{animation:appin .9s cubic-bezier(.2,.8,.2,1) backwards}
+body.launched.ready>header,body.launched.ready>main,body.launched.ready>footer{animation:none}
 @keyframes appin{from{opacity:0;transform:translateY(40px) scale(.98)}}
 #intro{position:absolute;top:0;left:0;width:100%;height:520vh;z-index:40}
 .stage{position:sticky;top:0;height:100vh;height:100dvh;overflow:hidden}
@@ -32,8 +33,8 @@ body.launched>header,body.launched>main,body.launched>footer{animation:appin .9s
 .go.show{opacity:1;pointer-events:auto}
 .track{position:absolute;right:10px;top:20%;bottom:20%;width:2px;background:var(--line)}
 .track i{display:block;height:100%;background:linear-gradient(var(--cyan),var(--violet));transform:scaleY(0);transform-origin:top}
-.flash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:60}
-body.flash .flash{animation:fl 1s ease-out}
+.flash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:60;display:none}
+body.flash .flash{display:block;animation:fl 1s ease-out}
 @keyframes fl{0%{opacity:0}45%{opacity:.95}100%{opacity:0}}
 body.launching .stage{animation:rumble .08s linear infinite}
 @keyframes rumble{25%{transform:translate(2px,-2px)}75%{transform:translate(-2px,2px)}}
