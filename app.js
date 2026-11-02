@@ -8,9 +8,9 @@ const I18N = {
   fa: {
     title: 'چت خصوصی', new: 'گفتگوی جدید', settings: 'تنظیمات',
     askAnything: 'هر چیزی بپرس.',
-    intro: 'برای شروع، از «تنظیمات» کلید API و مدل را وارد کن. گفتگوها فقط در همین تب می‌مانند.',
+    intro: 'برای شروع، از تنظیمات کلید API و مدل را وارد کن. گفتگوها فقط در همین تب می‌مانند.',
     placeholder: 'پیام خود را بنویس', send: 'ارسال', stop: 'توقف',
-    apiKey: 'کلید API (OpenRouter)', model: 'مدل', system: 'پیام سیستمی (اختیاری)',
+    apiKey: 'کلید API (OpenRouter)', model: 'مدل',
     deny: 'فقط providerهایی که داده ذخیره نمی‌کنند',
     remember: 'کلید را در این مرورگر نگه دار',
     note: 'پیش‌فرض: کلید فقط تا بسته شدن تب می‌ماند. هیچ داده‌ای به جز درخواست مستقیم به openrouter.ai ارسال نمی‌شود.',
@@ -23,7 +23,7 @@ const I18N = {
     askAnything: 'Ask anything.',
     intro: 'To start, open Settings and enter your API key and model. Chats stay in this tab only.',
     placeholder: 'Type your message', send: 'Send', stop: 'Stop',
-    apiKey: 'API key (OpenRouter)', model: 'Model', system: 'System prompt (optional)',
+    apiKey: 'API key (OpenRouter)', model: 'Model',
     deny: 'Only providers that do not store data',
     remember: 'Remember the key in this browser',
     note: 'By default the key lasts only until the tab is closed. Nothing is sent anywhere except directly to openrouter.ai.',
@@ -36,14 +36,22 @@ let lang = 'fa';
 try { if (localStorage.getItem('lang') === 'en') lang = 'en'; } catch {}
 const t = k => I18N[lang][k];
 
+function updateSend(){
+  sendBtn.classList.toggle('busy', busy);
+  const l = busy ? t('stop') : t('send');
+  sendBtn.setAttribute('aria-label', l); sendBtn.title = l;
+}
 function applyLang(){
   document.documentElement.lang = lang;
   document.documentElement.dir = lang === 'fa' ? 'rtl' : 'ltr';
   document.title = t('title');
   document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
   document.querySelectorAll('[data-i18n-ph]').forEach(el => { el.placeholder = t(el.dataset.i18nPh); });
+  document.querySelectorAll('[data-i18n-label]').forEach(el => {
+    const l = t(el.dataset.i18nLabel); el.setAttribute('aria-label', l); el.title = l;
+  });
   $('#langBtn').textContent = t('langBtn');
-  sendBtn.textContent = busy ? t('stop') : t('send');
+  updateSend();
   statusEl.textContent = statusKey ? t(statusKey) : '';
 }
 function setStatus(k){ statusKey = k; statusEl.textContent = k ? t(k) : ''; }
@@ -55,7 +63,7 @@ const store = {
 };
 
 function cfg(){
-  return { key: store.get('key'), model: store.get('model'), sys: store.get('sys'), deny: store.get('deny') !== '0' };
+  return { key: store.get('key'), model: store.get('model'), deny: store.get('deny') !== '0' };
 }
 function refreshLabel(){ $('#modelLabel').textContent = cfg().model; }
 
@@ -78,7 +86,7 @@ function addMsg(role, text){
   if (role === 'assistant') render(el, text); else { el.dir = 'auto'; el.textContent = text; }
   log.append(el); log.scrollTop = log.scrollHeight; return el;
 }
-function setBusy(b){ busy = b; sendBtn.textContent = b ? t('stop') : t('send'); }
+function setBusy(b){ busy = b; updateSend(); }
 
 async function send(){
   if (busy) { ctrl?.abort(); return; }
@@ -90,8 +98,7 @@ async function send(){
   const out = addMsg('assistant', ''); let acc = '';
   ctrl = new AbortController(); setBusy(true);
   try {
-    const msgs = (c.sys ? [{ role: 'system', content: c.sys }] : []).concat(history);
-    const body = { model: c.model, messages: msgs, stream: true };
+    const body = { model: c.model, messages: history, stream: true };
     if (c.deny) body.provider = { data_collection: 'deny' };
     const res = await fetch(API, {
       method: 'POST', signal: ctrl.signal, referrerPolicy: 'no-referrer', credentials: 'omit', cache: 'no-store',
@@ -142,7 +149,7 @@ $('#langBtn').addEventListener('click', () => {
 $('#newBtn').addEventListener('click', () => { ctrl?.abort(); history = []; log.replaceChildren(); setStatus(cfg().key ? '' : 'noKey'); });
 $('#setBtn').addEventListener('click', () => {
   const c = cfg();
-  $('#key').value = c.key; $('#model').value = c.model; $('#sys').value = c.sys; $('#deny').checked = c.deny;
+  $('#key').value = c.key; $('#model').value = c.model; $('#deny').checked = c.deny;
   $('#remember').checked = !!(() => { try { return localStorage.getItem('key'); } catch { return ''; } })();
   $('#dlg').showModal();
 });
@@ -150,8 +157,8 @@ $('#save').addEventListener('click', () => {
   const persist = $('#remember').checked;
   store.set('key', $('#key').value.trim(), persist);
   store.set('model', $('#model').value.trim(), persist);
-  store.set('sys', $('#sys').value, persist);
   store.set('deny', $('#deny').checked ? '1' : '0', persist);
+  store.del('sys');
   refreshLabel(); $('#dlg').close();
   setStatus(cfg().key ? '' : 'noKey');
 });
