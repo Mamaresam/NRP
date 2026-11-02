@@ -9,8 +9,40 @@
 <title>Private Chat</title>
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="intro.css">
+<link rel="stylesheet" href="lang.css">
 </head>
 <body>
+<template id="langTpl">
+  <button class="earth" type="button" data-i18n-label="language" aria-expanded="false">
+    <span class="globe">
+      <svg class="land" viewBox="0 0 200 100" preserveAspectRatio="none" aria-hidden="true">
+        <g fill="#58c47f" stroke="none">
+          <path d="M8 20c6-6 16-6 20-2 3 4-2 8 2 12 3 3 8 2 8 8-1 7-8 8-10 14-2 7-8 10-10 6-3-8 3-12-2-18-6-3-14-1-16-8-1-6 2-9 8-12z"/>
+          <path d="M52 20c8-5 18-4 22 2 4 5-2 9 3 14 6 5 9 12 4 20-4 7-12 6-15 0-3-7-10-8-12-16-1-6-8-8-6-14 1-3 2-5 4-6z"/>
+          <path d="M78 26c6-4 14-2 16 4 2 5-3 8-8 8-6 0-12-6-8-12z"/>
+          <path d="M80 66c5-3 11-1 12 4 0 5-7 7-12 4-3-2-3-6 0-8z"/>
+        </g>
+        <g fill="#58c47f" stroke="none" transform="translate(100 0)">
+          <path d="M8 20c6-6 16-6 20-2 3 4-2 8 2 12 3 3 8 2 8 8-1 7-8 8-10 14-2 7-8 10-10 6-3-8 3-12-2-18-6-3-14-1-16-8-1-6 2-9 8-12z"/>
+          <path d="M52 20c8-5 18-4 22 2 4 5-2 9 3 14 6 5 9 12 4 20-4 7-12 6-15 0-3-7-10-8-12-16-1-6-8-8-6-14 1-3 2-5 4-6z"/>
+          <path d="M78 26c6-4 14-2 16 4 2 5-3 8-8 8-6 0-12-6-8-12z"/>
+          <path d="M80 66c5-3 11-1 12 4 0 5-7 7-12 4-3-2-3-6 0-8z"/>
+        </g>
+      </svg>
+    </span>
+    <i class="sh"></i><i class="sh"></i><i class="sh"></i><i class="sh"></i><i class="sh"></i>
+    <i class="sh"></i><i class="sh"></i><i class="sh"></i><i class="sh"></i><i class="sh"></i>
+    <em class="shock"></em>
+  </button>
+  <span class="orbit">
+    <span class="ring"></span>
+    <span class="spin">
+      <span class="arm a1"><button class="met" type="button" data-l="en" aria-label="English">EN</button></span>
+      <span class="arm a2"><button class="met" type="button" data-l="fa" aria-label="فارسی">فا</button></span>
+    </span>
+  </span>
+</template>
+
 <div id="intro">
   <div class="stage">
     <div class="layer la" id="la"></div>
@@ -33,11 +65,7 @@
         <rect x="22" y="92" width="16" height="8" rx="2" fill="#4a4f80"/>
       </svg>
     </div>
-    <div class="itop">
-      <button id="langBtn2" type="button" dir="ltr">EN | فا</button>
-      <button id="skipBtn" type="button"><span class="fa">رد کردن</span><span class="en">Skip</span></button>
-    </div>
-    <button id="goBtn" class="go tint" type="button"><span class="fa">پرتاب</span><span class="en">Launch</span></button>
+    <div class="itop"><span class="lang-slot"></span></div>
     <div class="track"><i id="bar"></i></div>
   </div>
 </div>
@@ -46,8 +74,8 @@
 <header>
   <h1 data-i18n="title"></h1>
   <div class="bar">
+    <span class="lang-slot"></span>
     <span id="modelLabel" class="chip"></span>
-    <button id="langBtn" class="ghost" type="button" dir="ltr"></button>
     <button id="newBtn" class="ghost icon" type="button" data-i18n-label="new">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
     </button>
