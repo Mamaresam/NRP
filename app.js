@@ -6,7 +6,7 @@ let history = [], busy = false, ctrl = null, statusKey = '';
 
 const I18N = {
   fa: {
-    title: 'چت خصوصی', new: 'گفتگوی جدید', settings: 'تنظیمات',
+    title: 'چت خصوصی', new: 'گفتگوی جدید', settings: 'تنظیمات', language: 'زبان',
     askAnything: 'هر چیزی بپرس.',
     intro: 'برای شروع، از تنظیمات کلید API و مدل را وارد کن. گفتگوها فقط در همین تب می‌مانند.',
     placeholder: 'پیام خود را بنویس', send: 'ارسال', stop: 'توقف',
@@ -16,10 +16,10 @@ const I18N = {
     note: 'پیش‌فرض: کلید فقط تا بسته شدن تب می‌ماند. هیچ داده‌ای به جز درخواست مستقیم به openrouter.ai ارسال نمی‌شود.',
     wipe: 'پاک کردن کلید', save: 'ذخیره',
     needSetup: 'ابتدا کلید و مدل را وارد کن.', noKey: 'کلید API تنظیم نشده است.',
-    error: 'خطا', checkKey: ' (کلید یا اعتبار را بررسی کن)', langBtn: 'EN'
+    error: 'خطا', checkKey: ' (کلید یا اعتبار را بررسی کن)'
   },
   en: {
-    title: 'Private Chat', new: 'New chat', settings: 'Settings',
+    title: 'Private Chat', new: 'New chat', settings: 'Settings', language: 'Language',
     askAnything: 'Ask anything.',
     intro: 'To start, open Settings and enter your API key and model. Chats stay in this tab only.',
     placeholder: 'Type your message', send: 'Send', stop: 'Stop',
@@ -29,7 +29,7 @@ const I18N = {
     note: 'By default the key lasts only until the tab is closed. Nothing is sent anywhere except directly to openrouter.ai.',
     wipe: 'Clear key', save: 'Save',
     needSetup: 'Enter your key and model first.', noKey: 'No API key set.',
-    error: 'Error', checkKey: ' (check your key or credits)', langBtn: 'فا'
+    error: 'Error', checkKey: ' (check your key or credits)'
   }
 };
 let lang = 'en';
@@ -50,11 +50,29 @@ function applyLang(){
   document.querySelectorAll('[data-i18n-label]').forEach(el => {
     const l = t(el.dataset.i18nLabel); el.setAttribute('aria-label', l); el.title = l;
   });
-  $('#langBtn').textContent = t('langBtn');
+  document.querySelectorAll('.met').forEach(m => m.classList.toggle('cur', m.dataset.l === lang));
   updateSend();
   statusEl.textContent = statusKey ? t(statusKey) : '';
 }
+function setLang(l){
+  if (l === lang) return;
+  lang = l;
+  try { localStorage.setItem('lang', lang); } catch {}
+  applyLang();
+}
 function setStatus(k){ statusKey = k; statusEl.textContent = k ? t(k) : ''; }
+
+// Earth language picker: earth explodes into two meteors (EN / فا) orbiting its position
+const langTpl = $('#langTpl');
+document.querySelectorAll('.lang-slot').forEach(slot => {
+  slot.append(langTpl.content.cloneNode(true));
+  const earth = slot.querySelector('.earth');
+  const toggle = open => { slot.classList.toggle('open', open); earth.setAttribute('aria-expanded', String(open)); };
+  earth.addEventListener('click', () => toggle(!slot.classList.contains('open')));
+  slot.querySelectorAll('.met').forEach(m => m.addEventListener('click', () => { setLang(m.dataset.l); toggle(false); }));
+  document.addEventListener('click', e => { if (!slot.contains(e.target)) toggle(false); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') toggle(false); });
+});
 
 const store = {
   get(k){ try { return sessionStorage.getItem(k) ?? localStorage.getItem(k) ?? ''; } catch { return ''; } },
@@ -141,11 +159,6 @@ sendBtn.addEventListener('click', send);
 input.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); send(); } });
 input.addEventListener('input', () => { input.style.height = 'auto'; input.style.height = input.scrollHeight + 'px'; });
 
-$('#langBtn').addEventListener('click', () => {
-  lang = lang === 'fa' ? 'en' : 'fa';
-  try { localStorage.setItem('lang', lang); } catch {}
-  applyLang();
-});
 $('#newBtn').addEventListener('click', () => { ctrl?.abort(); history = []; log.replaceChildren(); setStatus(cfg().key ? '' : 'noKey'); });
 $('#setBtn').addEventListener('click', () => {
   const c = cfg();
