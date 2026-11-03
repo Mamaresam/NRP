@@ -18,7 +18,7 @@ body.launched.ready>header,body.launched.ready>main,body.launched.ready>footer{a
 .track{position:absolute;right:10px;top:20%;bottom:20%;width:2px;background:var(--line)}
 .track i{display:block;height:100%;background:linear-gradient(var(--cyan),var(--violet));transform:scaleY(0);transform-origin:top}
 .flash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:60;display:none}
-body.flash .flash{display:block;animation:fl .6s ease-out}
-@keyframes fl{0%{opacity:.95}100%{opacity:0}}
+body.flash .flash{display:block;animation:fl .3s ease-out}
+@keyframes fl{0%{opacity:.9}100%{opacity:0}}
 body.launching .cap,body.launching #nn,body.launching .itop,body.launching .track{opacity:0!important;transition:opacity .35s}
 #fx{position:fixed;left:0;top:0;width:100%;height:100%;z-index:50;pointer-events:none}
