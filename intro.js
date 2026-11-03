@@ -199,13 +199,61 @@ function drawPlanet(o, x, y, r, al, tt){
   ctx.restore();
 }
 
-/* ================= acts: all states are pure functions of (act, p) so they can play in reverse ================= */
+/* ================= rock chunks (irregular, faceted, tumbling) ================= */
+function mkRock(r){
+  const n = 6 + ((r() * 4) | 0), V = new Float32Array(n * 2), ft = [], el = .65 + r() * .45, a0 = r() * TAU;
+  for (let i = 0; i < n; i++) {
+    const a = a0 + (i + (r() - .5) * .5) / n * TAU, q = .62 + r() * .5;
+    V[i * 2] = Math.cos(a) * q; V[i * 2 + 1] = Math.sin(a) * q * el; ft.push(.82 + r() * .36);
+  }
+  return { n, v: V, ft };
+}
+const c255 = v => v > 255 ? 255 : v | 0;
+function drawRock(x, y, s, rot, rk, c, tone, h, vis){
+  const co = Math.cos(rot), si = Math.sin(rot), n = rk.n, V = rk.v;
+  const br0 = c[0] * .5 + 95, br1 = c[1] * .5 + 85, br2 = c[2] * .5 + 78;
+  if (h > .3) {
+    ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = vis * h * .7;
+    const g = s * 3.2; ctx.drawImage(sprites.f1, x - g, y - g, g * 2, g * 2);
+  }
+  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = vis;
+  const ex = h;
+  if (s < 4 || lowQ) {
+    const sh = .62 * tone;
+    ctx.fillStyle = `rgb(${c255(br0 * sh + 150 * ex)},${c255(br1 * sh + 70 * ex)},${c255(br2 * sh + 15 * ex)})`;
+    ctx.beginPath();
+    for (let i = 0; i < n; i++) {
+      const px = x + (V[i * 2] * co - V[i * 2 + 1] * si) * s, py = y + (V[i * 2] * si + V[i * 2 + 1] * co) * s;
+      if (i) ctx.lineTo(px, py); else ctx.moveTo(px, py);
+    }
+    ctx.closePath(); ctx.fill(); return;
+  }
+  let px = x + (V[0] * co - V[1] * si) * s, py = y + (V[0] * si + V[1] * co) * s;
+  ctx.lineWidth = .7; ctx.lineJoin = 'round';
+  for (let i = 1; i <= n; i++) {
+    const k = i % n, qx = x + (V[k * 2] * co - V[k * 2 + 1] * si) * s, qy = y + (V[k * 2] * si + V[k * 2 + 1] * co) * s;
+    const mx = (px + qx) / 2 - x, my = (py + qy) / 2 - y, ml = Math.hypot(mx, my) || 1;
+    const lam = clamp(-(mx * .55 + my * .65) / ml * .5 + .55);
+    const sh = (.22 + .95 * lam) * rk.ft[i - 1] * tone, em = ex * (1 - lam * .4);
+    const col = `rgb(${c255(br0 * sh + 255 * em * .6)},${c255(br1 * sh + 110 * em * .5)},${c255(br2 * sh + 25 * em * .3)})`;
+    ctx.fillStyle = col; ctx.strokeStyle = col;
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(px, py); ctx.lineTo(qx, qy); ctx.closePath(); ctx.fill();
+    if (s >= 6) ctx.stroke();
+    px = qx; py = qy;
+  }
+}
+
+/* ================= acts: all states are pure functions of (act, p, time) so they can play in reverse ================= */
 const HOME = (k, m) => [[W * .8, H * .68, m * .2], [W * .15, H * .9, m * .13], [W * .2, H * .27, m * .14], [W * .83, H * .3, m * .1]][k];
 const actsShake = (a, p) => a === 2 && p >= .5 ? 16 * Math.max(0, 1 - (p - .5) / .14) : 0;
 function initFx(){
   let r = rng(77); DEB = [];
-  for (let i = 0; i < 240; i++) { const sp = i >= 150 ? 1 : 0; DEB.push({ k: i % 2, a: r() * TAU, rf: Math.sqrt(r()), j: (r() - .5) * 1.2,
-    v: (.05 + r() * .6) * (sp ? 1.8 : 1), s: sp ? 1.2 + r() * 1.6 : 1.5 + r() * 4.5, sp, life: 1 + r() * 1.4, dl: r() * .45, sw: (r() - .5) * .5 }); }
+  for (let i = 0; i < 240; i++) {
+    const sp = i >= 150 ? 1 : 0, sf = .0045 + Math.pow(r(), 2.8) * .026;
+    DEB.push({ k: i % 2, a: r() * TAU, rf: Math.sqrt(r()), j: (r() - .5) * 1.2,
+      v: (.05 + r() * .6) * (sp ? 1.8 : 1.25 - (sf - .0045) * 16), s: sp ? 1.2 + r() * 1.6 : 0, sf, sp, life: 1 + r() * 1.4, dl: r() * .45, sw: (r() - .5) * .5,
+      rock: sp ? null : mkRock(r), rot0: r() * TAU, spin: (r() - .5) * (1 + r() * 2.6), wph: r() * TAU, wf: .25 + r() * .6, wa: .008 + r() * .03, tone: .75 + r() * .5 });
+  }
   r = rng(5); MET = [];
   for (let i = 0; i < 85; i++) { const big = r() < .12; MET.push({ ts: r() * 2.2, fx: .35 + r() * .9, fy: -.05 - r() * .3, ang: 2.55 + (r() - .5) * .25,
     sp: 1.2 + r() * 1.6, len: (.18 + r() * .3) * (big ? 1.6 : 1), w: big ? 3.2 : 1.3, big, z: .5 + r() * .5 }); }
@@ -227,24 +275,24 @@ function actsFrame(act, p, tt, vis){
   }
 
   if (tb > 0 && act < 4) {
-    ctx.save(); ctx.globalAlpha = vis;
+    ctx.save();
     for (const d of DEB) {
       const sp = d.sp; if (sp && tb > d.life) continue;
       const P = bp[d.k], bx = P[0] + Math.cos(d.a) * d.rf * P[2], by = P[1] + Math.sin(d.a) * d.rf * P[2];
       const ang = Math.atan2(by - hy, bx - hx) + d.j, dist = d.v * m * (1 - Math.exp(-.25 * tb)) / .25;
-      let x = bx + Math.cos(ang) * dist, y = by + Math.sin(ang) * dist, sz = d.s;
+      let x = bx + Math.cos(ang) * dist, y = by + Math.sin(ang) * dist, sz = sp ? d.s : d.sf * m;
+      if (!sp) { const w = d.wa * m; x += Math.sin(tt * d.wf + d.wph) * w; y += Math.cos(tt * d.wf * .8 + d.wph * 1.3) * w; }
       if (act === 3 && !sp) {
         const pull = ramp(p, d.dl, d.dl + .5); if (pull >= .97) continue;
         const e = eio(pull), T = HOME(2 + d.k, m), sw = Math.sin(Math.PI * pull) * d.sw * m * .4;
-        x = lerp(x, T[0], e) - (T[1] - y) * 0 + sw; y = lerp(y, T[1], e) + sw * .6; sz *= 1 - e * .5;
+        x = lerp(x, T[0], e) + sw; y = lerp(y, T[1], e) + sw * .6; sz *= 1 - e * .5;
       }
+      if (x < -sz * 3 || x > W + sz * 3 || y < -sz * 3 || y > H + sz * 3) continue;
       const h = sp ? 1 - tb / d.life : Math.max(0, 1 - tb / 3.2);
-      if (sp) { ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = `rgba(255,${(120 + 110 * h) | 0},${(50 + 60 * h) | 0},${h})`; ctx.beginPath(); ctx.arc(x, y, sz * h, 0, TAU); ctx.fill(); }
-      else {
-        const c = PL[d.k].avg; ctx.globalCompositeOperation = 'source-over';
-        ctx.fillStyle = `rgb(${c[0] * .45 | 0},${c[1] * .4 | 0},${c[2] * .4 | 0})`; ctx.beginPath(); ctx.arc(x, y, sz, 0, TAU); ctx.fill();
-        if (h > .3) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = vis * h * .8; const s = sz * 3; ctx.drawImage(sprites.f1, x - s, y - s, s * 2, s * 2); ctx.globalAlpha = vis; }
-      }
+      if (sp) {
+        ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = vis;
+        ctx.fillStyle = `rgba(255,${(120 + 110 * h) | 0},${(50 + 60 * h) | 0},${h})`; ctx.beginPath(); ctx.arc(x, y, sz * h, 0, TAU); ctx.fill();
+      } else drawRock(x, y, sz, d.rot0 + d.spin * tt, d.rock, PL[d.k].avg, d.tone, h, vis);
     }
     ctx.restore();
   }
