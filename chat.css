@@ -1,0 +1,7 @@
+html.fx-on body::before,html.fx-on body::after,html.fx-on::before{display:none}
+#bgfx{position:fixed;left:0;top:0;width:100%;height:100%;z-index:-1;pointer-events:none;display:block}
+#empty{margin-top:4vh;display:flex;justify-content:center}
+#orbit{width:min(100%,520px);aspect-ratio:520/250;display:block}
+.composer{position:relative;overflow:hidden;isolation:isolate}
+#cmpfx{position:absolute;left:0;top:0;width:100%;height:100%;z-index:-1;pointer-events:none;display:block}
+#input{text-shadow:0 1px 8px rgba(2,4,14,.95)}
