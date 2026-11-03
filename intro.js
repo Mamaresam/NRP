@@ -20,9 +20,12 @@ const clearTimers = () => { timers.forEach(clearTimeout); timers = []; };
 /* ---------- navigation between intro and chat ---------- */
 function reveal(push = true){
   clearTimers();
+  // coming from the glass shatter: the chat must already be there behind the shards, no entrance delay
+  const instant = phase === 'crack';
   launching = true; phase = 'done';
   body.classList.remove('launching', 'ready');
   body.classList.add('launched');
+  if (instant) body.classList.add('ready');
   try { sessionStorage.setItem('seen', '1'); } catch {}
   root.style.overflow = ''; scrollTo(0, 0);
   void body.offsetHeight;
@@ -30,7 +33,7 @@ function reveal(push = true){
     if (!body.classList.contains('launched')) return;
     body.classList.remove('flash');
     body.classList.add('ready');
-  }, 1200);
+  }, instant ? 400 : 1200);
   if (push && !reduce && !pushed) { try { history.pushState({ chat: 1 }, ''); pushed = true; } catch {} }
 }
 window.NRP_reveal = reveal;
