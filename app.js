@@ -1,34 +1,32 @@
 'use strict';
 const $ = s => document.querySelector(s);
 const API = 'https://openrouter.ai/api/v1/chat/completions';
-const log = $('#log'), input = $('#input'), sendBtn = $('#send'), statusEl = $('#status');
+const log = $('#log'), input = $('#input'), sendBtn = $('#send'), statusEl = $('#status'), emptyEl = $('#empty');
 let messages = [], busy = false, ctrl = null, statusKey = '';
 
 const I18N = {
   fa: {
-    title: 'چت خصوصی', new: 'گفتگوی جدید', settings: 'تنظیمات', language: 'زبان',
+    title: 'ماده‌ی تاریک', new: 'گفتگوی جدید', settings: 'تنظیمات', language: 'زبان',
     askAnything: 'هر چیزی بپرس.',
-    intro: 'برای شروع، از تنظیمات کلید API و مدل را وارد کن. گفتگوها فقط در همین تب می‌مانند.',
     placeholder: 'پیام خود را بنویس', send: 'ارسال', stop: 'توقف',
     apiKey: 'کلید API (OpenRouter)', model: 'مدل',
     deny: 'فقط providerهایی که داده ذخیره نمی‌کنند',
     remember: 'کلید را در این مرورگر نگه دار',
     note: 'پیش‌فرض: کلید فقط تا بسته شدن تب می‌ماند. هیچ داده‌ای به جز درخواست مستقیم به openrouter.ai ارسال نمی‌شود.',
     wipe: 'پاک کردن کلید', save: 'ذخیره',
-    needSetup: 'ابتدا کلید و مدل را وارد کن.', noKey: 'کلید API تنظیم نشده است.',
+    needSetup: 'ابتدا کلید و مدل را وارد کن.',
     error: 'خطا', checkKey: ' (کلید یا اعتبار را بررسی کن)'
   },
   en: {
-    title: 'Private Chat', new: 'New chat', settings: 'Settings', language: 'Language',
+    title: 'Dark Matter', new: 'New chat', settings: 'Settings', language: 'Language',
     askAnything: 'Ask anything.',
-    intro: 'To start, open Settings and enter your API key and model. Chats stay in this tab only.',
     placeholder: 'Type your message', send: 'Send', stop: 'Stop',
     apiKey: 'API key (OpenRouter)', model: 'Model',
     deny: 'Only providers that do not store data',
     remember: 'Remember the key in this browser',
     note: 'By default the key lasts only until the tab is closed. Nothing is sent anywhere except directly to openrouter.ai.',
     wipe: 'Clear key', save: 'Save',
-    needSetup: 'Enter your key and model first.', noKey: 'No API key set.',
+    needSetup: 'Enter your key and model first.',
     error: 'Error', checkKey: ' (check your key or credits)'
   }
 };
@@ -53,6 +51,7 @@ function applyLang(){
   document.querySelectorAll('.met').forEach(m => m.classList.toggle('cur', m.dataset.l === lang));
   updateSend();
   statusEl.textContent = statusKey ? t(statusKey) : '';
+  if (window.NRP_onLang) window.NRP_onLang();
 }
 function setLang(l){
   if (l === lang) return;
@@ -159,7 +158,7 @@ sendBtn.addEventListener('click', send);
 input.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); send(); } });
 input.addEventListener('input', () => { input.style.height = 'auto'; input.style.height = input.scrollHeight + 'px'; });
 
-$('#newBtn').addEventListener('click', () => { ctrl?.abort(); messages = []; log.replaceChildren(); setStatus(cfg().key ? '' : 'noKey'); });
+$('#newBtn').addEventListener('click', () => { ctrl?.abort(); messages = []; log.replaceChildren(emptyEl); setStatus(''); });
 $('#setBtn').addEventListener('click', () => {
   const c = cfg();
   $('#key').value = c.key; $('#model').value = c.model; $('#deny').checked = c.deny;
@@ -173,11 +172,11 @@ $('#save').addEventListener('click', () => {
   store.set('deny', $('#deny').checked ? '1' : '0', persist);
   store.del('sys');
   refreshLabel(); $('#dlg').close();
-  setStatus(cfg().key ? '' : 'noKey');
+  setStatus('');
 });
 $('#wipe').addEventListener('click', () => { store.del('key'); $('#key').value = ''; $('#remember').checked = false; });
 $('#dlg').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.close(); });
 
 refreshLabel();
-statusKey = cfg().key ? '' : 'noKey';
+statusKey = '';
 applyLang();
