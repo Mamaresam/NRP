@@ -139,7 +139,7 @@ function ensureScene(){
   sceneReady = true;
 }
 
-/* ---------- cracks and shatter ---------- */
+/* ---------- cracks ---------- */
 function makeCracks(){
   const r = rng((Math.random() * 1e9) | 0), diag = Math.hypot(W, H), cx = W / 2, cy = H / 2;
   cracks = [];
@@ -189,11 +189,13 @@ function drawCracks(c, g){
   });
   c.restore();
 }
+
+/* ---------- glass shards ---------- */
 function buildShards(){
   const r = rng((Math.random() * 1e9) | 0), cx = W / 2, cy = H / 2, diag = Math.hypot(W, H), NN = 12;
-  const radii = [0, .07, .17, .32, .55, 1.05].map(v => v * diag);
+  const radii = [0, .06, .14, .26, .42, .68, 1.1].map(v => v * diag);
   const pts = radii.map((rad, k) => k === 0 ? [[cx, cy]] : Array.from({ length: NN }, (_, s) => {
-    const a = (s + (r() - .5) * .5) / NN * TAU, rr = rad * (k === radii.length - 1 ? 1 : .88 + r() * .24);
+    const a = (s + (r() - .5) * .55) / NN * TAU, rr = rad * (k === radii.length - 1 ? 1 : .86 + r() * .28);
     return [cx + Math.cos(a) * rr, cy + Math.sin(a) * rr];
   }));
   const tris = [];
@@ -209,10 +211,13 @@ function buildShards(){
     const y0 = clamp(Math.min(t[0][1], t[1][1], t[2][1]) - 2, 0, H), y1 = clamp(Math.max(t[0][1], t[1][1], t[2][1]) + 2, 0, H);
     if (x1 - x0 < 1 || y1 - y0 < 1) continue;
     const dx = mx - cx, dy = my - cy, dist = Math.hypot(dx, dy) || 1;
-    const sp = (220 + 700 * Math.exp(-dist / (diag * .22))) * (.6 + r() * .8);
+    const near = Math.exp(-dist / (diag * .2));
+    const sp = diag * (.12 + .75 * near) * (.6 + r() * .8);
     out.push({ t, mx, my, x0, y0, w: x1 - x0, h: y1 - y0,
-      vx: dx / dist * sp * .55 + (r() - .5) * 120, vy: dy / dist * sp * .55 - 60 - r() * 140,
-      rot: (r() - .5) * 6, delay: dist / diag * 220 });
+      vx: dx / dist * sp + (r() - .5) * diag * .08,
+      vy: dy / dist * sp * .8 - diag * (.02 + .1 * near) * (.5 + r()),
+      rot: (r() - .5) * 5, flip: (r() - .5) * 6,
+      delay: 40 + dist / diag * 320 + r() * 60 });
   }
   return out;
 }
@@ -222,26 +227,29 @@ function shatter(){
   const fx = document.createElement('canvas'); fx.id = 'fx'; fx.width = snap.width; fx.height = snap.height;
   body.append(fx);
   const f = fx.getContext('2d'), shards = buildShards(), t0 = performance.now();
+  const diag = Math.hypot(W, H), G = H * 2.6;
   const tick = now => {
     const el = now - t0;
     f.setTransform(1, 0, 0, 1, 0, 0); f.clearRect(0, 0, fx.width, fx.height);
     f.setTransform(dpr, 0, 0, dpr, 0, 0);
     let alive = 0;
     for (const s of shards) {
-      const t = Math.max(0, el - s.delay) / 1000, alpha = 1 - ramp(t, .7, 1.25);
-      if (alpha <= 0) continue;
+      const t = Math.max(0, el - s.delay) / 1000;
+      const x = s.mx + s.vx * t, y = s.my + s.vy * t + .5 * G * t * t;
+      if (y > H + diag * .25) continue;
       alive++;
-      const sc2 = 1 - .25 * ramp(t, 0, 1.2);
-      f.save(); f.globalAlpha = alpha;
-      f.translate(s.mx + s.vx * t, s.my + s.vy * t + 1000 * t * t);
-      f.rotate(s.rot * t); f.scale(sc2, sc2); f.translate(-s.mx, -s.my);
+      const cs = Math.cos(s.flip * t);
+      f.save();
+      f.translate(x, y); f.rotate(s.rot * t); f.scale(cs, 1); f.translate(-s.mx, -s.my);
       f.beginPath(); f.moveTo(s.t[0][0], s.t[0][1]); f.lineTo(s.t[1][0], s.t[1][1]); f.lineTo(s.t[2][0], s.t[2][1]); f.closePath();
       f.clip();
       f.drawImage(snap, s.x0 * dpr, s.y0 * dpr, s.w * dpr, s.h * dpr, s.x0, s.y0, s.w, s.h);
-      f.strokeStyle = 'rgba(255,255,255,.4)'; f.lineWidth = 1; f.stroke();
+      const dark = .45 * (1 - Math.abs(cs));
+      if (dark > .01) { f.fillStyle = `rgba(0,0,20,${dark})`; f.fillRect(s.x0, s.y0, s.w, s.h); }
+      f.strokeStyle = 'rgba(210,235,255,.55)'; f.lineWidth = 1.2; f.stroke();
       f.restore();
     }
-    if (alive && el < 2600) requestAnimationFrame(tick); else fx.remove();
+    if (alive && el < 4000) requestAnimationFrame(tick); else fx.remove();
   };
   tick(t0);
   window.NRP_reveal();
