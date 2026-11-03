@@ -1,12 +1,30 @@
 'use strict';
 (() => {
+const DEBUG = true;
 const $ = id => document.getElementById(id), body = document.body, root = document.documentElement;
 const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
-const ramp = (x, a, b) => clamp((x - a) / (b - a));
+const ramp = (x, a, b) => b === a ? (x >= b ? 1 : 0) : clamp((x - a) / (b - a));
 const lerp = (a, b, t) => a + (b - a) * t;
 const smooth = t => t * t * (3 - 2 * t);
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const TAU = Math.PI * 2;
+
+function showErr(e){
+  if (!DEBUG) return;
+  try {
+    let el = document.getElementById('dbg');
+    if (!el) {
+      el = document.createElement('pre'); el.id = 'dbg';
+      const s = el.style;
+      s.position = 'fixed'; s.left = '8px'; s.right = '8px'; s.bottom = '8px'; s.zIndex = '99';
+      s.margin = '0'; s.padding = '8px'; s.font = '12px monospace'; s.color = '#ffb4a8';
+      s.background = 'rgba(0,0,0,.85)'; s.whiteSpace = 'pre-wrap'; s.maxHeight = '40vh'; s.overflow = 'auto';
+      body.append(el);
+    }
+    el.textContent += String((e && (e.stack || e.message)) || e).slice(0, 500) + '\n';
+  } catch {}
+}
+addEventListener('error', ev => showErr(ev.error || ev.message));
 
 // timing (ms) and camera setup
 const T_IGN = 900, T_FLY = 2400, T_CRACK = 420;
@@ -67,6 +85,10 @@ function reveal(push = true){
   }, 1200);
   if (push && !reduce && !pushed) { try { history.pushState({ chat: 1 }, ''); pushed = true; } catch {} }
 }
+function fail(e){
+  showErr(e); stop();
+  if (!body.classList.contains('launched')) reveal(false);
+}
 // back to the launch scene (rocket on the pad, ready to fly again)
 function toIntro(){
   clearTimers();
@@ -75,7 +97,7 @@ function toIntro(){
   const old = document.getElementById('fx'); if (old) old.remove();
   body.classList.remove('launched', 'launching', 'flash', 'ready');
   root.style.overflow = '';
-  ensureScene(); resizeScene();
+  try { ensureScene(); resizeScene(); } catch (e) { showErr(e); }
   requestAnimationFrame(() => { scrollTo(0, Math.round(maxScroll * .9)); start(); });
 }
 
@@ -163,12 +185,12 @@ function drawRocket(pos, fi){
   const f = FOC(), cx = W / 2, cy = H / 2;
   for (let i = 0; i < NV; i++) {
     const x = V[i * 3], y = V[i * 3 + 1], z = V[i * 3 + 2];
-    const X = mat[0] * x + mat[1] * y + mat[2] * z + pos[0];
-    const Y = mat[3] * x + mat[4] * y + mat[5] * z + pos[1];
-    const Z = mat[6] * x + mat[7] * y + mat[8] * z + pos[2];
-    const d = D - Z;
-    WX[i] = X; WY[i] = Y; WZ[i] = Z; DD[i] = d;
-    if (d > .12) { SX[i] = cx + X * f / d; SY[i] = cy - Y * f / d; }
+    const X1 = mat[0] * x + mat[1] * y + mat[2] * z + pos[0];
+    const Y1 = mat[3] * x + mat[4] * y + mat[5] * z + pos[1];
+    const Z1 = mat[6] * x + mat[7] * y + mat[8] * z + pos[2];
+    const d = D - Z1;
+    WX[i] = X1; WY[i] = Y1; WZ[i] = Z1; DD[i] = d;
+    if (d > .12) { SX[i] = cx + X1 * f / d; SY[i] = cy - Y1 * f / d; }
   }
   order.length = 0;
   const adx = -mat[1], ady = -mat[4], adz = -mat[7];
@@ -376,27 +398,4 @@ function drawPad(alpha){
   const g2 = ctx.createRadialGradient(0, -rx * .2, 0, 0, 0, rx);
   g2.addColorStop(0, '#5662c8'); g2.addColorStop(1, '#262b66');
   ctx.fillStyle = g2; ctx.beginPath(); ctx.arc(0, 0, rx, 0, TAU); ctx.fill();
-  ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(160,215,255,.7)'; ctx.stroke();
-  ctx.restore();
-}
-
-/* ---------- scene setup ---------- */
-function resizeScene(){
-  if (!sky) return;
-  const st = sky.parentElement, w = st.clientWidth, h = st.clientHeight;
-  maxScroll = Math.max(1, $('intro').offsetHeight - innerHeight);
-  if (!w || !h) return;
-  if (Math.abs(w - W) < 2 && Math.abs(h - H) < 2) return;
-  W = w; H = h; dpr = Math.min(devicePixelRatio || 1, 1.5);
-  sky.width = Math.round(W * dpr); sky.height = Math.round(H * dpr);
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  vig = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * .35, W / 2, H / 2, Math.hypot(W, H) * .6);
-  vig.addColorStop(0, 'rgba(0,0,10,0)'); vig.addColorStop(1, 'rgba(0,0,10,.55)');
-}
-function ensureScene(){
-  if (sceneReady) return;
-  sky = $('sky'); ctx = sky.getContext('2d');
-  resizeScene();
-  if (!W) return;
-  buildNebula();
-  const r = rng(99), cols = ['#ffffff'
+  ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(160,215,255,.7)'; ctx.str
