@@ -1,5 +1,7 @@
 'use strict';
 
+let lowQ = false, snapC = null, shardList = null;
+
 /* ---------- space background ---------- */
 const BANDA = .9;
 function buildNebula(){
@@ -72,22 +74,26 @@ function drawSky(p, tt, warp){
   const cx = W / 2, cy = H / 2;
   ctx.fillStyle = '#02030b'; ctx.fillRect(-20, -20, W + 40, H + 40);
   const s = Math.max(W / nb.width, H * 1.4 / nb.height) * 1.06, nw = nb.width * s, nh = nb.height * s;
-  ctx.save(); ctx.translate(cx, cy); const k = 1 + warp * .5; ctx.scale(k, k);
+  ctx.save(); ctx.translate(cx, cy); const k = 1 + warp * .06; ctx.scale(k, k);
   ctx.drawImage(nb, -nw / 2, -cy - (nh - H) * p, nw, nh);
   ctx.restore();
   for (const st of stars) {
-    let y = (st.y - p * .3 * st.z) % 1; if (y < 0) y += 1;
-    let x = st.x * W; y *= H;
-    if (warp) {
-      const w = 1 + warp * (.6 + 3 * st.z);
-      x = cx + (x - cx) * w; y = cy + (y - cy) * w;
-      if (x < -20 || x > W + 20 || y < -20 || y > H + 20) continue;
+    let yy = (st.y - p * .3 * st.z) % 1; if (yy < 0) yy += 1;
+    const bx = st.x * W, by = yy * H;
+    const a = (.55 + .45 * Math.sin(tt * st.sp + st.ph)) * (.5 + .5 * st.z), z = st.s;
+    if (warp > .03) {
+      // speed streaks: stars stretch outward from the center
+      const g = warp * (.6 + 3 * st.z);
+      const x1 = cx + (bx - cx) * (1 + g), y1 = cy + (by - cy) * (1 + g);
+      if (x1 < -30 || x1 > W + 30 || y1 < -30 || y1 > H + 30) continue;
+      const x0 = cx + (bx - cx) * (1 + g * .55), y0 = cy + (by - cy) * (1 + g * .55);
+      ctx.globalAlpha = Math.min(1, a + warp * .4); ctx.strokeStyle = st.c; ctx.lineWidth = Math.max(.7, z * (1 + warp));
+      ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+      continue;
     }
-    const a = (.55 + .45 * Math.sin(tt * st.sp + st.ph)) * (.5 + .5 * st.z);
-    const z = st.s * (1 + warp * .8);
     ctx.globalAlpha = a; ctx.fillStyle = st.c;
-    ctx.fillRect(x - z / 2, y - z / 2, z, z);
-    if (st.s > 1.4) { ctx.globalAlpha = a * .35; ctx.drawImage(sprites.glow, x - z * 4, y - z * 4, z * 8, z * 8); }
+    ctx.fillRect(bx - z / 2, by - z / 2, z, z);
+    if (st.s > 1.4) { ctx.globalAlpha = a * .35; ctx.drawImage(sprites.glow, bx - z * 4, by - z * 4, z * 8, z * 8); }
   }
   ctx.globalAlpha = 1;
   const m = Math.min(W, H), w = 1 + warp * 1.3;
@@ -118,7 +124,7 @@ function resizeScene(){
   maxScroll = Math.max(1, byId('intro').offsetHeight - innerHeight);
   if (!w || !h) return;
   if (Math.abs(w - W) < 2 && Math.abs(h - H) < 2) return;
-  W = w; H = h; dpr = Math.min(devicePixelRatio || 1, 1.5);
+  W = w; H = h; dpr = Math.min(devicePixelRatio || 1, lowQ ? 1 : 1.5);
   sky.width = Math.round(W * dpr); sky.height = Math.round(H * dpr);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   vig = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * .35, W / 2, H / 2, Math.hypot(W, H) * .6);
@@ -190,10 +196,13 @@ function drawCracks(c, g){
   c.restore();
 }
 
-/* ---------- glass shards ---------- */
-function buildShards(){
-  const r = rng((Math.random() * 1e9) | 0), cx = W / 2, cy = H / 2, diag = Math.hypot(W, H), NN = 12;
-  const radii = [0, .06, .14, .26, .42, .68, 1.1].map(v => v * diag);
+/* ---------- glass shards (each piece is cut out once, then only drawn) ---------- */
+function triPath(g, t){
+  g.beginPath(); g.moveTo(t[0][0], t[0][1]); g.lineTo(t[1][0], t[1][1]); g.lineTo(t[2][0], t[2][1]); g.closePath();
+}
+function buildShards(src){
+  const r = rng((Math.random() * 1e9) | 0), cx = W / 2, cy = H / 2, diag = Math.hypot(W, H), NN = 16;
+  const radii = [0, .05, .11, .19, .29, .42, .58, .78, 1.1].map(v => v * diag);
   const pts = radii.map((rad, k) => k === 0 ? [[cx, cy]] : Array.from({ length: NN }, (_, s) => {
     const a = (s + (r() - .5) * .55) / NN * TAU, rr = rad * (k === radii.length - 1 ? 1 : .86 + r() * .28);
     return [cx + Math.cos(a) * rr, cy + Math.sin(a) * rr];
@@ -210,46 +219,46 @@ function buildShards(){
     const x0 = clamp(Math.min(t[0][0], t[1][0], t[2][0]) - 2, 0, W), x1 = clamp(Math.max(t[0][0], t[1][0], t[2][0]) + 2, 0, W);
     const y0 = clamp(Math.min(t[0][1], t[1][1], t[2][1]) - 2, 0, H), y1 = clamp(Math.max(t[0][1], t[1][1], t[2][1]) + 2, 0, H);
     if (x1 - x0 < 1 || y1 - y0 < 1) continue;
+    const sp = document.createElement('canvas');
+    sp.width = Math.max(1, Math.ceil((x1 - x0) * dpr)); sp.height = Math.max(1, Math.ceil((y1 - y0) * dpr));
+    const g = sp.getContext('2d');
+    g.setTransform(dpr, 0, 0, dpr, -x0 * dpr, -y0 * dpr);
+    triPath(g, t); g.save(); g.clip();
+    g.drawImage(src, 0, 0, src.width, src.height, 0, 0, W, H);
+    g.restore();
+    triPath(g, t); g.lineJoin = 'round'; g.lineWidth = 1.2; g.strokeStyle = 'rgba(215,238,255,.55)'; g.stroke();
     const dx = mx - cx, dy = my - cy, dist = Math.hypot(dx, dy) || 1;
-    const near = Math.exp(-dist / (diag * .2));
-    const sp = diag * (.12 + .75 * near) * (.6 + r() * .8);
-    out.push({ t, mx, my, x0, y0, w: x1 - x0, h: y1 - y0,
-      vx: dx / dist * sp + (r() - .5) * diag * .08,
-      vy: dy / dist * sp * .8 - diag * (.02 + .1 * near) * (.5 + r()),
-      rot: (r() - .5) * 5, flip: (r() - .5) * 6,
-      delay: 40 + dist / diag * 320 + r() * 60 });
+    const near = Math.exp(-dist / (diag * .22));
+    const sv = diag * (.05 + .55 * near) * (.6 + r() * .8);
+    out.push({ sp, dw: sp.width / dpr, dh: sp.height / dpr, x0, y0, h: y1 - y0, mx, my,
+      vx: dx / dist * sv + (r() - .5) * diag * .05,
+      vy: dy / dist * sv * .6 - diag * (.03 + .12 * near) * (.4 + r()),
+      rot: (r() - .5) * (2 + 5 * near), flip: (r() - .5) * 5,
+      delay: 30 + dist / diag * 420 + r() * 50 });
   }
   return out;
 }
 function shatter(){
-  const sc = snap.getContext('2d');
-  sc.setTransform(dpr, 0, 0, dpr, 0, 0); drawCracks(sc, 1);
-  const fx = document.createElement('canvas'); fx.id = 'fx'; fx.width = snap.width; fx.height = snap.height;
+  const fx = document.createElement('canvas'); fx.id = 'fx'; fx.width = sky.width; fx.height = sky.height;
   body.append(fx);
-  const f = fx.getContext('2d'), shards = buildShards(), t0 = performance.now();
-  const diag = Math.hypot(W, H), G = H * 2.6;
+  const f = fx.getContext('2d'), shards = shardList || [], t0 = performance.now();
+  shardList = null; snapC = null; snap = null;
+  const G = H * 2.0;
   const tick = now => {
-    const el = now - t0;
-    f.setTransform(1, 0, 0, 1, 0, 0); f.clearRect(0, 0, fx.width, fx.height);
-    f.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const el = Math.max(0, now - t0);
+    f.setTransform(1, 0, 0, 1, 0, 0); f.globalAlpha = 1; f.clearRect(0, 0, fx.width, fx.height);
     let alive = 0;
     for (const s of shards) {
       const t = Math.max(0, el - s.delay) / 1000;
       const x = s.mx + s.vx * t, y = s.my + s.vy * t + .5 * G * t * t;
-      if (y > H + diag * .25) continue;
+      if (y > H + s.h || x < -W * .6 || x > W * 1.6) continue;
       alive++;
-      const cs = Math.cos(s.flip * t);
-      f.save();
-      f.translate(x, y); f.rotate(s.rot * t); f.scale(cs, 1); f.translate(-s.mx, -s.my);
-      f.beginPath(); f.moveTo(s.t[0][0], s.t[0][1]); f.lineTo(s.t[1][0], s.t[1][1]); f.lineTo(s.t[2][0], s.t[2][1]); f.closePath();
-      f.clip();
-      f.drawImage(snap, s.x0 * dpr, s.y0 * dpr, s.w * dpr, s.h * dpr, s.x0, s.y0, s.w, s.h);
-      const dark = .45 * (1 - Math.abs(cs));
-      if (dark > .01) { f.fillStyle = `rgba(0,0,20,${dark})`; f.fillRect(s.x0, s.y0, s.w, s.h); }
-      f.strokeStyle = 'rgba(210,235,255,.55)'; f.lineWidth = 1.2; f.stroke();
-      f.restore();
+      const c = Math.cos(s.rot * t), sn = Math.sin(s.rot * t), cs = Math.cos(s.flip * t);
+      f.setTransform(dpr * c * cs, dpr * sn * cs, -dpr * sn, dpr * c, dpr * x, dpr * y);
+      f.globalAlpha = .6 + .4 * Math.abs(cs);
+      f.drawImage(s.sp, s.x0 - s.mx, s.y0 - s.my, s.dw, s.dh);
     }
-    if (alive && el < 4000) requestAnimationFrame(tick); else fx.remove();
+    if (alive && el < 4500) requestAnimationFrame(tick); else fx.remove();
   };
   tick(t0);
   window.NRP_reveal();
