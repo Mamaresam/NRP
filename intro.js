@@ -9,8 +9,10 @@ if (!window.NRP_A || !window.NRP_B) {
 } else {
 (() => {
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const FLY_IGN = 600, FLY_T = 1800;
 let launching = false, pushed = false, last = '', lastP = -1;
 let raf = 0, prevTs = 0, simT = 0, phase = 'scroll', tPhase = 0, scrollP = 0, atEnd = false;
+let perfN = 0, perfSum = 0, perfDone = false;
 let timers = [];
 try { history.scrollRestoration = 'manual'; } catch {}
 
@@ -46,7 +48,7 @@ function fail(e){
 function toIntro(){
   clearTimers();
   launching = false; last = ''; lastP = -1; phase = 'scroll';
-  parts.length = 0; snap = null; accF = 0; accS = 0;
+  parts.length = 0; snap = null; snapC = null; shardList = null; accF = 0; accS = 0;
   const old = document.getElementById('fx'); if (old) old.remove();
   body.classList.remove('launched', 'launching', 'flash', 'ready');
   root.style.overflow = '';
@@ -102,8 +104,20 @@ function step(ts){
 }
 
 function frameStep(ts){
-  const dt = Math.min(.05, Math.max(0, (ts - prevTs) / 1000)); prevTs = ts; simT += dt * 1000;
+  // the animation clock follows real time, so a slow phone does not stretch the launch
+  const rdt = Math.min(.25, Math.max(0, (ts - prevTs) / 1000)), dt = Math.min(.05, rdt);
+  prevTs = ts; simT += rdt * 1000;
   if (phase === 'crack') { crackFrame(); return; }
+
+  // if the device is slow, drop to a lighter mode (lower resolution, fewer particles)
+  if (phase === 'scroll' && !perfDone && ++perfN > 5) {
+    perfSum += rdt;
+    if (perfN >= 55) {
+      perfDone = true;
+      if (perfSum / 50 > .034) { lowQ = true; W = 0; resizeScene(); }
+    }
+  }
+
   const tt = simT / 1000, pos = POS;
   let p = scrollP, warp = 0, fi = 0, padA = 1, shake = 0, pitch = .2, bank = 0, u = 0;
   PREV[0] = pos[0]; PREV[1] = pos[1]; PREV[2] = pos[2];
@@ -121,8 +135,8 @@ function frameStep(ts){
     roll += dt * .7;
     if (p >= .97 || (p > .9 && atEnd)) launch();
   } else if (phase === 'flight') {
-    const t = simT - tPhase, ig = ramp(t, 0, T_IGN);
-    u = clamp((t - T_IGN) / T_FLY);
+    const t = simT - tPhase, ig = ramp(t, 0, FLY_IGN);
+    u = clamp((t - FLY_IGN) / FLY_T);
     fi = u > 0 ? 1 : .55 + .45 * ig;
     shake = u > 0 ? 3 + 14 * u * u * u : 2.5 + 2 * ig;
     padA = 1 - ramp(u, 0, .25);
@@ -138,6 +152,8 @@ function frameStep(ts){
   for (let i = 0; i < 3; i++) VEL[i] = dt > 0 ? (pos[i] - PREV[i]) / dt : 0;
   setMat(pitch, bank, roll);
   updateParts(dt, fi, pos, VEL);
+  const cap = lowQ ? 110 : 240;
+  if (parts.length > cap) parts.length = cap;
 
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.save();
@@ -154,9 +170,24 @@ function frameStep(ts){
 
 /* ---------- impact -> cracks -> shatter ---------- */
 function impact(){
-  snap = document.createElement('canvas'); snap.width = sky.width; snap.height = sky.height;
-  snap.getContext('2d').drawImage(sky, 0, 0);
+  const cw = sky.width, ch = sky.height;
+  snap = document.createElement('canvas'); snap.width = cw; snap.height = ch;
+  const sc = snap.getContext('2d');
+  sc.drawImage(sky, 0, 0);
+  // bright burst where the rocket hits the glass
+  sc.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const R = Math.hypot(W, H) * .22;
+  const bg = sc.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, R);
+  bg.addColorStop(0, 'rgba(255,255,255,.95)'); bg.addColorStop(.35, 'rgba(255,210,150,.55)'); bg.addColorStop(1, 'rgba(255,140,60,0)');
+  sc.fillStyle = bg; sc.fillRect(0, 0, W, H);
   makeCracks();
+  // the finished cracked glass is cut into pieces now, hidden under the white flash
+  snapC = document.createElement('canvas'); snapC.width = cw; snapC.height = ch;
+  const cc = snapC.getContext('2d');
+  cc.drawImage(snap, 0, 0);
+  cc.setTransform(dpr, 0, 0, dpr, 0, 0);
+  drawCracks(cc, 1);
+  shardList = buildShards(snapC);
   phase = 'crack'; tPhase = simT;
   body.classList.add('flash');
 }
