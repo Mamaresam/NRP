@@ -6,12 +6,14 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; connect-src https://openrouter.ai; img-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="dark">
-<title>Private Chat</title>
+<title>Dark Matter</title>
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="intro.css">
 <link rel="stylesheet" href="lang.css">
+<link rel="stylesheet" href="chat.css">
 </head>
 <body>
+<canvas id="bgfx" aria-hidden="true"></canvas>
 <template id="langTpl">
   <button class="earth" type="button" data-i18n-label="language" aria-expanded="false">
     <span class="globe">
@@ -74,13 +76,13 @@
 
 <main id="log" aria-live="polite">
   <div id="empty">
-    <p class="big" data-i18n="askAnything"></p>
-    <p class="small" data-i18n="intro"></p>
+    <canvas id="orbit" role="img"></canvas>
   </div>
 </main>
 
 <footer>
   <div class="composer">
+    <canvas id="cmpfx" aria-hidden="true"></canvas>
     <textarea id="input" rows="1" dir="auto" data-i18n-ph="placeholder"></textarea>
     <button id="send" class="icon send" type="button">
       <svg class="i-send" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
@@ -109,6 +111,7 @@
   </div>
 </dialog>
 <script src="app.js"></script>
+<script src="chat.js"></script>
 <script src="fx3d.js"></script>
 <script src="space.js"></script>
 <script src="intro.js"></script>
