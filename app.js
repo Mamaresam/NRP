@@ -9,6 +9,9 @@ const I18N = {
     title: 'ماده‌ی تاریک', new: 'گفتگوی جدید', settings: 'تنظیمات', language: 'زبان',
     askAnything: 'هر چیزی بپرس.',
     placeholder: 'پیام خود را بنویس', send: 'ارسال', stop: 'توقف',
+    secLang: 'زبان', secApi: 'اتصال', secPrivacy: 'حریم خصوصی',
+    langEn: 'انگلیسی', langFa: 'فارسی',
+    toLight: 'تم روشن', toDark: 'تم تیره',
     apiKey: 'کلید API (OpenRouter)', model: 'مدل',
     deny: 'فقط providerهایی که داده ذخیره نمی‌کنند',
     remember: 'کلید را در این مرورگر نگه دار',
@@ -21,6 +24,9 @@ const I18N = {
     title: 'Dark Matter', new: 'New chat', settings: 'Settings', language: 'Language',
     askAnything: 'Ask anything.',
     placeholder: 'Type your message', send: 'Send', stop: 'Stop',
+    secLang: 'Language', secApi: 'Connection', secPrivacy: 'Privacy',
+    langEn: 'English', langFa: 'Persian',
+    toLight: 'Light theme', toDark: 'Dark theme',
     apiKey: 'API key (OpenRouter)', model: 'Model',
     deny: 'Only providers that do not store data',
     remember: 'Remember the key in this browser',
@@ -32,26 +38,29 @@ const I18N = {
 };
 let lang = 'en';
 try { if (localStorage.getItem('lang') === 'fa') lang = 'fa'; } catch {}
-const t = k => I18N[lang][k];
+// a right-to-left mark keeps trailing punctuation on the correct side of Persian text inside the left-to-right layout
+const t = k => { const s = I18N[lang][k]; return lang === 'fa' ? s.replace(/([.…:!؟?])$/, '$1\u200F') : s; };
 
 function updateSend(){
   sendBtn.classList.toggle('busy', busy);
   const l = busy ? t('stop') : t('send');
   sendBtn.setAttribute('aria-label', l); sendBtn.title = l;
 }
+function updateThemeBtn(){
+  const light = document.documentElement.dataset.theme === 'light', l = t(light ? 'toDark' : 'toLight');
+  const b = $('#themeBtn'); b.setAttribute('aria-label', l); b.title = l;
+}
 function applyLang(){
-  document.documentElement.lang = lang;
-  document.documentElement.dir = lang === 'fa' ? 'rtl' : 'ltr';
+  const r = document.documentElement;
+  r.lang = lang; r.dir = 'ltr';   // layout never flips: Persian is shown inside the same left-to-right layout
   document.title = t('title');
   document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
-  document.querySelectorAll('[data-i18n-ph]').forEach(el => { el.placeholder = t(el.dataset.i18nPh); });
-  document.querySelectorAll('[data-i18n-label]').forEach(el => {
-    const l = t(el.dataset.i18nLabel); el.setAttribute('aria-label', l); el.title = l;
-  });
-  document.querySelectorAll('.met').forEach(m => m.classList.toggle('cur', m.dataset.l === lang));
-  updateSend();
+  document.querySelectorAll('[data-i18n-label]').forEach(el => { const l = t(el.dataset.i18nLabel); el.setAttribute('aria-label', l); el.title = l; });
+  document.querySelectorAll('[data-i18n-aria]').forEach(el => { el.setAttribute('aria-label', t(el.dataset.i18nAria)); });
+  document.querySelectorAll('.seg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.l === lang)));
+  updateThemeBtn(); updateSend();
   statusEl.textContent = statusKey ? t(statusKey) : '';
-  if (window.NRP_onLang) window.NRP_onLang();
+  document.dispatchEvent(new Event('nrp-lang'));
 }
 function setLang(l){
   if (l === lang) return;
@@ -61,27 +70,23 @@ function setLang(l){
 }
 function setStatus(k){ statusKey = k; statusEl.textContent = k ? t(k) : ''; }
 
-// Earth language picker: earth explodes into two meteors (EN / فا) orbiting its position
-const langTpl = $('#langTpl');
-document.querySelectorAll('.lang-slot').forEach(slot => {
-  slot.append(langTpl.content.cloneNode(true));
-  const earth = slot.querySelector('.earth');
-  const toggle = open => { slot.classList.toggle('open', open); earth.setAttribute('aria-expanded', String(open)); };
-  earth.addEventListener('click', () => toggle(!slot.classList.contains('open')));
-  slot.querySelectorAll('.met').forEach(m => m.addEventListener('click', () => { setLang(m.dataset.l); toggle(false); }));
-  document.addEventListener('click', e => { if (!slot.contains(e.target)) toggle(false); });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') toggle(false); });
-});
+function applyTheme(th, anim){
+  const r = document.documentElement;
+  if (anim) { r.classList.add('theming'); setTimeout(() => r.classList.remove('theming'), 700); }
+  if (th === 'light') r.dataset.theme = 'light'; else delete r.dataset.theme;
+  try { localStorage.setItem('theme', th); } catch {}
+  updateThemeBtn();
+  document.dispatchEvent(new Event('nrp-theme'));
+}
+$('#themeBtn').addEventListener('click', () => applyTheme(document.documentElement.dataset.theme === 'light' ? 'dark' : 'light', true));
+document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => setLang(b.dataset.l)));
 
 const store = {
   get(k){ try { return sessionStorage.getItem(k) ?? localStorage.getItem(k) ?? ''; } catch { return ''; } },
   set(k,v,persist){ try { (persist ? localStorage : sessionStorage).setItem(k,v); (persist ? sessionStorage : localStorage).removeItem(k); } catch {} },
   del(k){ try { sessionStorage.removeItem(k); localStorage.removeItem(k); } catch {} }
 };
-
-function cfg(){
-  return { key: store.get('key'), model: store.get('model'), deny: store.get('deny') !== '0' };
-}
+function cfg(){ return { key: store.get('key'), model: store.get('model'), deny: store.get('deny') !== '0' }; }
 function refreshLabel(){ $('#modelLabel').textContent = cfg().model; }
 
 // Render text safely: only textContent, never innerHTML. Fenced code becomes <pre>.
@@ -171,12 +176,10 @@ $('#save').addEventListener('click', () => {
   store.set('model', $('#model').value.trim(), persist);
   store.set('deny', $('#deny').checked ? '1' : '0', persist);
   store.del('sys');
-  refreshLabel(); $('#dlg').close();
-  setStatus('');
+  refreshLabel(); $('#dlg').close(); setStatus('');
 });
 $('#wipe').addEventListener('click', () => { store.del('key'); $('#key').value = ''; $('#remember').checked = false; });
 $('#dlg').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.close(); });
 
 refreshLabel();
-statusKey = '';
 applyLang();
