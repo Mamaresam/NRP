@@ -5,8 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; connect-src https://openrouter.ai; img-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
-<meta name="color-scheme" content="dark">
+<meta name="color-scheme" content="dark light">
 <title>Dark Matter</title>
+<script src="theme.js"></script>
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="intro.css">
 <link rel="stylesheet" href="lang.css">
@@ -14,36 +15,6 @@
 </head>
 <body>
 <canvas id="bgfx" aria-hidden="true"></canvas>
-<template id="langTpl">
-  <button class="earth" type="button" data-i18n-label="language" aria-expanded="false">
-    <span class="globe">
-      <svg class="land" viewBox="0 0 200 100" preserveAspectRatio="none" aria-hidden="true">
-        <g fill="#58c47f" stroke="none">
-          <path d="M8 20c6-6 16-6 20-2 3 4-2 8 2 12 3 3 8 2 8 8-1 7-8 8-10 14-2 7-8 10-10 6-3-8 3-12-2-18-6-3-14-1-16-8-1-6 2-9 8-12z"/>
-          <path d="M52 20c8-5 18-4 22 2 4 5-2 9 3 14 6 5 9 12 4 20-4 7-12 6-15 0-3-7-10-8-12-16-1-6-8-8-6-14 1-3 2-5 4-6z"/>
-          <path d="M78 26c6-4 14-2 16 4 2 5-3 8-8 8-6 0-12-6-8-12z"/>
-          <path d="M80 66c5-3 11-1 12 4 0 5-7 7-12 4-3-2-3-6 0-8z"/>
-        </g>
-        <g fill="#58c47f" stroke="none" transform="translate(100 0)">
-          <path d="M8 20c6-6 16-6 20-2 3 4-2 8 2 12 3 3 8 2 8 8-1 7-8 8-10 14-2 7-8 10-10 6-3-8 3-12-2-18-6-3-14-1-16-8-1-6 2-9 8-12z"/>
-          <path d="M52 20c8-5 18-4 22 2 4 5-2 9 3 14 6 5 9 12 4 20-4 7-12 6-15 0-3-7-10-8-12-16-1-6-8-8-6-14 1-3 2-5 4-6z"/>
-          <path d="M78 26c6-4 14-2 16 4 2 5-3 8-8 8-6 0-12-6-8-12z"/>
-          <path d="M80 66c5-3 11-1 12 4 0 5-7 7-12 4-3-2-3-6 0-8z"/>
-        </g>
-      </svg>
-    </span>
-    <i class="sh"></i><i class="sh"></i><i class="sh"></i><i class="sh"></i><i class="sh"></i>
-    <i class="sh"></i><i class="sh"></i><i class="sh"></i><i class="sh"></i><i class="sh"></i>
-    <em class="shock"></em>
-  </button>
-  <span class="orbit">
-    <span class="ring"></span>
-    <span class="spin">
-      <span class="arm a1"><button class="met" type="button" data-l="en" aria-label="English">EN</button></span>
-      <span class="arm a2"><button class="met" type="button" data-l="fa" aria-label="فارسی">فا</button></span>
-    </span>
-  </span>
-</template>
 
 <div id="intro">
   <div class="stage">
@@ -54,7 +25,12 @@
     <div class="cap" data-r=".2,.26,.36,.42"><span class="fa">فقط کلید تو. فقط مرورگر تو.</span><span class="en">Your key. Your browser.</span></div>
     <div class="cap" data-r=".4,.46,.5,.56"><span class="fa">بدون سرور. بدون ردیابی.</span><span class="en">No server. No tracking.</span></div>
     <div class="cap" data-r=".72,.78,1,1"><span class="fa">آماده‌ی پرتاب</span><span class="en">Ready for launch</span><div class="num" id="count"></div></div>
-    <div class="itop"><span class="lang-slot"></span></div>
+    <div id="lang">
+      <canvas id="langfx" aria-hidden="true"></canvas>
+      <button class="lang-hit" type="button" data-i18n-label="language" aria-expanded="false"></button>
+      <button class="sr" type="button" data-l="en" data-i18n="langEn"></button>
+      <button class="sr" type="button" data-l="fa" data-i18n="langFa"></button>
+    </div>
     <div class="track"><i id="bar"></i></div>
   </div>
 </div>
@@ -63,13 +39,16 @@
 <header>
   <h1 data-i18n="title"></h1>
   <div class="bar">
-    <span class="lang-slot"></span>
     <span id="modelLabel" class="chip"></span>
+    <button id="themeBtn" class="ghost icon" type="button">
+      <svg class="i-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      <svg class="i-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+    </button>
     <button id="newBtn" class="ghost icon" type="button" data-i18n-label="new">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
     </button>
     <button id="setBtn" class="ghost icon" type="button" data-i18n-label="settings">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
     </button>
   </div>
 </header>
@@ -83,9 +62,12 @@
 <footer>
   <div class="composer">
     <canvas id="cmpfx" aria-hidden="true"></canvas>
-    <textarea id="input" rows="1" dir="auto" data-i18n-ph="placeholder"></textarea>
+    <div class="field">
+      <textarea id="input" rows="1" dir="auto" placeholder=" " data-i18n-aria="placeholder"></textarea>
+      <span id="ph" aria-hidden="true" data-i18n="placeholder"></span>
+    </div>
     <button id="send" class="icon send" type="button">
-      <svg class="i-send" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+      <span class="sp1"><span class="sp2"><svg class="i-send" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></span></span>
       <svg class="i-stop" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2" fill="currentColor" stroke="none"/></svg>
     </button>
   </div>
@@ -95,15 +77,28 @@
 <dialog id="dlg">
   <div class="panel">
     <h2 data-i18n="settings"></h2>
-    <label><span data-i18n="apiKey"></span>
-      <input id="key" type="password" autocomplete="off" spellcheck="false" dir="ltr">
-    </label>
-    <label><span data-i18n="model"></span>
-      <input id="model" type="text" autocomplete="off" spellcheck="false" dir="ltr" placeholder="provider/model-name">
-    </label>
-    <label class="row"><input id="deny" type="checkbox" checked> <span data-i18n="deny"></span></label>
-    <label class="row"><input id="remember" type="checkbox"> <span data-i18n="remember"></span></label>
-    <p class="small" data-i18n="note"></p>
+    <section>
+      <h3 data-i18n="secLang"></h3>
+      <div class="seg" role="group">
+        <button type="button" data-l="en" data-i18n="langEn"></button>
+        <button type="button" data-l="fa" data-i18n="langFa"></button>
+      </div>
+    </section>
+    <section>
+      <h3 data-i18n="secApi"></h3>
+      <label><span data-i18n="apiKey"></span>
+        <input id="key" type="password" autocomplete="off" spellcheck="false" dir="ltr">
+      </label>
+      <label><span data-i18n="model"></span>
+        <input id="model" type="text" autocomplete="off" spellcheck="false" dir="ltr" placeholder="provider/model-name">
+      </label>
+    </section>
+    <section>
+      <h3 data-i18n="secPrivacy"></h3>
+      <label class="row"><input id="deny" type="checkbox" checked> <span data-i18n="deny"></span></label>
+      <label class="row"><input id="remember" type="checkbox"> <span data-i18n="remember"></span></label>
+      <p class="small" data-i18n="note"></p>
+    </section>
     <div class="actions">
       <button id="wipe" class="ghost danger" type="button" data-i18n="wipe"></button>
       <button id="save" class="tint" type="button" data-i18n="save"></button>
@@ -112,6 +107,7 @@
 </dialog>
 <script src="app.js"></script>
 <script src="chat.js"></script>
+<script src="lang.js"></script>
 <script src="fx3d.js"></script>
 <script src="space.js"></script>
 <script src="intro.js"></script>
