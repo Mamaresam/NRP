@@ -1,7 +1,33 @@
 html.fx-on body::before,html.fx-on body::after,html.fx-on::before{display:none}
-#bgfx{position:fixed;left:0;top:0;width:100%;height:100%;z-index:-1;pointer-events:none;display:block}
+#bgfx{position:fixed;left:0;top:0;width:100%;height:100%;z-index:-1;pointer-events:none;display:block;transform:scale(1.05);will-change:transform}
 #empty{margin-top:4vh;display:flex;justify-content:center}
 #orbit{width:min(100%,520px);aspect-ratio:520/250;display:block}
-.composer{position:relative;overflow:hidden;isolation:isolate}
+
+/* composer: always a dark "window to space", in both themes */
+.composer{--ink:#e9ecff;--muted:#9aa3d0;--line:rgba(150,160,255,.28);color:#e9ecff;background:#05071a;position:relative;overflow:hidden;isolation:isolate}
+html[data-theme="light"] .composer{border-color:rgba(106,86,232,.4);box-shadow:0 6px 24px rgba(60,70,160,.16)}
 #cmpfx{position:absolute;left:0;top:0;width:100%;height:100%;z-index:-1;pointer-events:none;display:block}
-#input{text-shadow:0 1px 8px rgba(2,4,14,.95)}
+.field{position:relative;flex:1;min-width:0}
+#input{text-shadow:0 1px 8px rgba(2,4,14,.95);color:#e9ecff}
+
+/* glowing, drifting placeholder */
+#ph{position:absolute;left:10px;top:8px;pointer-events:none;white-space:nowrap;
+  background:linear-gradient(100deg,#8f9cff 0%,#5de4ff 25%,#ffffff 45%,#c3a7ff 65%,#8f9cff 100%);background-size:260% 100%;
+  -webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;
+  filter:drop-shadow(0 0 7px rgba(93,228,255,.45));
+  animation:phshine 5s linear infinite,phfloat 6s ease-in-out infinite,phglow 3.2s ease-in-out infinite}
+#input:not(:placeholder-shown)~#ph{opacity:0}
+#input:focus~#ph{opacity:.8}
+@keyframes phshine{to{background-position:-260% 0}}
+@keyframes phfloat{0%,100%{transform:translate(0,0)}25%{transform:translate(5px,-1.5px)}50%{transform:translate(1px,1.5px)}75%{transform:translate(-3px,-.5px)}}
+@keyframes phglow{50%{filter:drop-shadow(0 0 12px rgba(139,123,255,.85))}}
+
+/* send arrow: spirals inside its own button */
+.send{position:relative;overflow:hidden}
+.sp1,.sp2{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none}
+.sp1{animation:orb1 3.6s linear infinite}
+.sp2{animation:orbT 3.6s ease-in-out infinite,orbR 3.6s linear infinite}
+@keyframes orb1{to{rotate:360deg}}
+@keyframes orbR{to{rotate:-360deg}}
+@keyframes orbT{0%,100%{translate:1px 0}25%{translate:3px 0}50%{translate:1.2px 0}75%{translate:3.4px 0}}
+.send.busy .sp1{display:none}
